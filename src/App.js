@@ -58,7 +58,7 @@ class App extends React.Component {
       this.setState({ currentStatus: 0 });
       console.log('FileReader.onload()')
       if (window.Worker) {
-        const worker = new Worker('/worker.js');
+        const worker = new Worker('./worker.js');
         worker.onmessage = e => {
           console.log('Worker.onmessage()')
           if (e.data.type === 'status') {
