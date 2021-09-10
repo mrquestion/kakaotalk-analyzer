@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>카카오톡 로그 분석기</title>
+    <script src="//cdn.jsdelivr.net/npm/moment/min/moment-with-locales.min.js"></script>
+    <script src="//cdn.jsdelivr.net/npm/crypto-js/crypto-js.js"></script>
+    <link rel="stylesheet" href="style.css" />
+    <script type="module" src="script.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <label class="input-file">
+        <span id="input-file-label" class="label">KakaoTalkChats.txt 파일 선택...</span>
+        <input id="file" type="file" accept=".txt" value="KakaoTalkChats.txt" />
+        <input id="input-file-default" type="hidden" value="KakaoTalkChats.txt 파일 선택..." />
+      </label>
+      <progress id="progress" max="100" value="0"></progress>
+      <div class="pre">
+        <pre id="file-result"></pre>
+      </div>
+      <div id="users"></div>
+      <label class="input-search">
+        <input id="search-name" type="text" placeholder="Input name here for searching..." />
+      </label>
+      <label class="input-search">
+        <input id="search-keyword" type="text" placeholder="Input keyword here for searching..." />
+      </label>
+      <label class="input-search">
+        <input id="search-keyword-exact-match" type="checkbox" />
+        Exact match
+      </label>
+      <!-- <label class="input-search half">
+        <input id="search-start-time" type="date" />
+      </label>
+      ~
+      <label class="input-search half">
+        <input id="search-end-time" type="date" />
+      </label> -->
+      <div style="width: 100%">
+        <button id="search">Search</button>
+      </div>
+      <div class="pre">
+        <pre id="search-result"></pre>
+      </div>
+    </div>
+    <div class="container">
+      <div id="timeline">
+        <!-- <div class="row">
+          <div class="col"></div>
+        </div>
+        <div class="row">
+          <div class="col"></div>
+          <div class="col"></div>
+        </div>
+        <div class="row">
+          <div class="col"></div>
+          <div class="col"></div>
+          <div class="col"></div>
+        </div>
+        <div class="row">
+          <div class="col"></div>
+          <div class="col"></div>
+          <div class="col"></div>
+          <div class="col"></div>
+        </div> -->
+      </div>
+    </div>
+  </body>
+</html>

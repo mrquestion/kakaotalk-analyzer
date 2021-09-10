@@ -1,0 +1,251 @@
+@charset "utf-8";
+
+html, body {
+  margin: 0px;
+  padding: 0px;
+  width: 100%;
+  /* height: 100%; */
+}
+@media (prefers-color-scheme: dark) {
+  html, body {
+    background-color: #111;
+  }
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 12px;
+}
+/* @media screen and (max-width: 480px) {
+  .container {
+    width: 100%;
+  }
+} */
+
+$min-width: 320px;
+$border-width: 1px;
+$padding-horizontal: 24px;
+$min-width-with-border-padding: calc(
+    #{$border-width}
+  + #{$padding-horizontal}
+  + #{$min-width}
+  + #{$padding-horizontal}
+  + #{$border-width}
+);
+$border: $border-width solid #111;
+$border-dark: $border-width solid #bbb;
+$border-radius: 4px;
+
+@mixin border {
+  border: $border;
+  border-radius: $border-radius;
+
+  @media (prefers-color-scheme: dark) {
+    border: $border-dark;
+  }
+}
+
+@mixin font {
+  font-size: 12px;
+
+  @media (prefers-color-scheme: dark) {
+    color: #bbb;
+  }
+}
+
+@mixin neumorphism {
+  // background: linear-gradient(135deg, rgba(0, 0, 0, .22), rgba(255, 255, 255, .25));
+  background-color: #eee;
+  box-shadow: 4px 4px 16px 0 rgba(0, 0, 0, .25), -3px -3px 4px 0 rgba(255, 255, 255, .3);
+  border: none;
+  border-radius: $border-radius;
+  // height: 200px;
+}
+
+@mixin button {
+  @include border();
+  @include font();
+  @include neumorphism();
+
+  padding: 12px $padding-horizontal;
+  min-width: $min-width;
+  text-align: center;
+  cursor: pointer;
+
+  &:hover {
+    background-color: #eee;
+  }
+  &:active {
+    background-color: #ddd;
+}
+  &:focus {
+    border: 1px solid #37f;
+  }
+
+  @media screen and (max-width: 480px) {
+    width: 100%;
+    padding: 12px 0px;
+    min-width: unset;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    color: #bbb;
+  }
+}
+
+@mixin pre {
+  // padding: 12px 6px;
+  margin: 0px;
+  padding: 0px;
+  // min-width: calc(
+  //   #{$min-width-with-border-padding}
+  //   - #{$border-width} * 2
+  //   - (#{$padding-horizontal} - 6px * 2)
+  // );
+  // background-color: #eee;
+
+  @media screen and (max-width: 480px) {
+    width: 100%;
+    min-width: unset;
+  }
+}
+
+.input-file {
+  @include button();
+
+  margin-top: 12px;
+
+  label {
+    @include font();
+  }
+  input[type="file"] {
+    display: none;
+  }
+}
+
+progress {
+  min-width: $min-width-with-border-padding;
+
+  @media screen and (max-width: 480px) {
+    width: 100%;
+    min-width: unset;
+  }
+
+  // &::-webkit-progress-bar {
+
+  // }
+  // &::-webkit-progress-value {
+
+  // }
+}
+
+.pre {
+  @include border();
+  @include font();
+  @include neumorphism();
+
+  margin-top: 12px;
+  padding: 12px $padding-horizontal;
+  min-width: $min-width;
+  background-color: #eee;
+
+  @media screen and (max-width: 480px) {
+    width: 100%;
+    padding: 12px 0px;
+    min-width: unset;
+  }
+
+  pre {
+    @include pre();
+  }
+}
+
+#users {
+  display: flex;
+  flex-wrap: wrap;
+
+  .badge {
+    @include border();
+    @include font();
+
+    margin: 2px;
+    padding: 2px 4px;
+  }
+}
+
+.input-search {
+  @include border();
+  @include font();
+  @include neumorphism();
+
+  margin-top: 12px;
+  padding: 12px $padding-horizontal;
+  min-width: $min-width;
+
+  @media screen and (max-width: 480px) {
+    width: calc(100% - 2 * #{$padding-horizontal});
+    min-width: unset;
+  }
+
+  label {
+    @include font();
+  }
+  input {
+    @include font();
+
+    background-color: transparent;
+
+    &[type="text"] {
+      margin: 0px;
+      padding: 0px;
+      width: 100%;
+      border: none;
+      outline: none;
+    }
+    // &[type="checkbox"] {
+
+    // }
+    &[type="date"] {
+      border: none;
+      outline: none;
+    }
+  }
+}
+
+#search {
+  @include button();
+
+  margin-top: 12px;
+  padding: 12px $padding-horizontal;
+  min-width: $min-width-with-border-padding;
+  // background-color: transparent;
+
+  @media screen and (max-width: 480px) {
+    width: calc(#{$border-width} + 100% + #{$border-width});
+  }
+
+  @media (prefers-color-scheme: dark) {
+    border: 1px solid #bbb;
+    color: #bbb;
+  }
+}
+
+#timeline {
+  // display: flex;
+  // flex-direction: row;
+  width: 100%;
+
+  .row {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100px;
+
+    .col {
+      background-color: red;
+      border: 1px solid black;
+    }
+  }
+}

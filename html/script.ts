@@ -1,0 +1,231 @@
+import { KakaoTalkChat } from './interfaces.js';
+
+import moment from './moment.js';
+import CryptoJS from './crypto-js.js';
+
+interface GlobalObject {
+  metadata?: KakaoTalkChat.Metadata;
+  chats?: KakaoTalkChat.Chat[];
+  groupByName: { [name: string]: KakaoTalkChat.Chat[] };
+}
+
+const g: GlobalObject = {
+  groupByName: {},
+};
+
+window.addEventListener('load', async (ev: Event) => {
+  const registrations: readonly ServiceWorkerRegistration[] = await navigator.serviceWorker.getRegistrations();
+  registrations.forEach(async (registration: ServiceWorkerRegistration) => await registration.unregister());
+
+  const registration: ServiceWorkerRegistration =
+    await navigator.serviceWorker?.register('service-worker.js');
+
+  const file: HTMLInputElement = document.querySelector<HTMLInputElement>('#file')!;
+  file.addEventListener('change', (ev: Event) => {
+    let t = performance.now();
+    const label: HTMLSpanElement = document.querySelector<HTMLSpanElement>('#input-file-label')!;
+    const fileList: FileList = document.querySelector<HTMLInputElement>('#file')?.files!;
+    if (fileList.length > 0) {
+      const file: File = Array.from(fileList).shift()!;
+      label.innerText = file.name;
+      const fileReader = new FileReader();
+      fileReader.addEventListener('load', (ev: ProgressEvent<FileReader>) => {
+        const { result }: FileReader = fileReader;
+        const rawFile = result as string;
+        const data: KakaoTalkChat.RawFileData = {
+          type: KakaoTalkChat.MessageEventType.RAW_FILE,
+          rawFile,
+        };
+        const messageChannel = new MessageChannel();
+        messageChannel.port1.onmessage = (ev: MessageEvent<KakaoTalkChat.MessageEventData>) => {
+          const { data }: MessageEvent<KakaoTalkChat.MessageEventData> = ev;
+          if (data.type === KakaoTalkChat.MessageEventType.PARSED) {
+            const { metadata, chats } = data as KakaoTalkChat.ParsedChatData;
+            g.metadata = metadata;
+            g.chats = chats;
+            g.groupByName = {};
+            const progress: HTMLProgressElement = document.querySelector<HTMLProgressElement>('progress')!;
+            progress.value = 100;
+            for (let chat of chats) {
+              // chat.time = moment(chat.timestamp, 'YYYY년 MM월 DD일 AA HH:mm', 'ko');
+              const matched: RegExpMatchArray = chat.timestamp.match(/^(\d+)년 (\d+)월 (\d+)일 (오전|오후) (\d+):(\d+)/)!;
+              if (matched) {
+                const [ _, _year, _month, _day, _ampm, _hour, _minute ]: RegExpMatchArray = matched;
+                const year: number = parseInt(_year);
+                const month: number = parseInt(_month);
+                const day: number = parseInt(_day);
+                let hour: number = parseInt(_hour);
+                if (_ampm === '오후') {
+                  hour += 12;
+                  hour %= 24;
+                } else if (_ampm === '오전' && hour === 12) {
+                  hour -= 12;
+                }
+                const minute: number = parseInt(_minute);
+                const daysByMonth: number[] = [ 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 ].slice(0, month - 1);
+                const days: number = daysByMonth.length > 0 ? daysByMonth.reduce((a, b) => a + b) : 0;
+                const time = (year - 1970) * 365.25 * 24 * 60 * 60 * 1000
+                  + days * 24 * 60 * 60 * 1000
+                  + (day - 1) * 24 * 60 * 60 * 1000
+                  + (hour - 3) * 60 * 60 * 1000
+                  + minute * 60 * 1000;
+                chat.time = new Date(time);
+              }
+              if (chat.type === KakaoTalkChat.ChatType.MESSAGE) {
+                if (!g.groupByName[chat.name]) {
+                  g.groupByName[chat.name] = [];
+                }
+                g.groupByName[chat.name].push(chat);
+              }
+            }
+
+            const fileResult: HTMLDivElement = document.querySelector<HTMLDivElement>('#file-result')!;
+            fileResult.innerText = `'${metadata.chatTitle}' 채팅을 불러왔습니다.`;
+            const times: number[] = chats.map((chat: KakaoTalkChat.Chat): number => chat.time?.getTime()!);
+            const timeGroups = [];
+            for (let i = 0; i < times.length; i += 100000) {
+              timeGroups.push(times.slice(i, i + 100000));
+            }
+            const minimumTime: Date = new Date(Math.min(...timeGroups.map((times: number[]): number => Math.min(...times))));
+            const maximumTime: Date = new Date(Math.max(...timeGroups.map((times: number[]): number => Math.max(...times))));
+            fileResult.innerText += `\n처음 날짜는   '${minimumTime.toLocaleString()}' 입니다.`;
+            fileResult.innerText += `\n마지막 날짜는 '${maximumTime.toLocaleString()}' 입니다.`;
+            fileResult.innerText += `\n${chats.length} 개의 메시지가 있습니다.`;
+            fileResult.innerText += `\n${Object.keys(g.groupByName).length} 명의 사용자가 있습니다.`;
+
+            const sortedGroup: ({ name: string, count: number, size: number })[] = [];
+            function getByteLength(text: string): number {
+              let b = 0;
+              for (let i = 0, c = null; c = text.charCodeAt(i++); b += c >> 11 ? 3 : c >> 7 ? 2 : 1);
+              return b;
+            }
+            for (let name in g.groupByName) {
+              const chats: KakaoTalkChat.Chat[] = g.groupByName[name];
+              let size = 0;
+              for (let chat of chats) {
+                if (chat.type === KakaoTalkChat.ChatType.MESSAGE) {
+                  size += getByteLength(chat.text);
+                }
+              }
+              sortedGroup.push({ name, count: chats.length, size });
+            }
+            sortedGroup.sort((a, b) => -(a.size - b.size));
+            function getByteFormat(size: number): string {
+              let unit: string = 'B';
+              if (size > 1024) {
+                size /= 1024;
+                unit = 'KB';
+              }
+              if (size > 1024) {
+                size /= 1024;
+                unit = 'MB';
+              }
+              if (size> 1024) {
+                size /= 1024;
+                unit = 'GB';
+              }
+              if (size> 1024) {
+                size /= 1024;
+                unit = 'TB';
+              }
+              size = parseFloat(size.toFixed(2));
+              return `${size} ${unit}`;
+            }
+            const users: HTMLDivElement = document.querySelector<HTMLDivElement>('#users')!;
+            while (users.firstChild) {
+              users.removeChild(users.firstChild);
+            }
+            for (let { name, count, size } of sortedGroup) {
+              const badge: HTMLSpanElement = document.createElement('span');
+              badge.className = 'badge';
+              const sha512 = CryptoJS.SHA512(name).toString();
+              badge.style.backgroundColor = `#${sha512.substr(0, 6)}33`;
+              badge.innerText = `${name}: ${count.toLocaleString()} (${getByteFormat(size)})`;
+              users.appendChild(badge);
+            }
+
+            // TODO: timeline
+            const timeline = document.querySelector('#timeline')!;
+            let nameMap: any = {};
+            for (let chat of chats) {
+              if (chat.type === KakaoTalkChat.ChatType.EVENT) {
+                const sorted = [];
+                for (let name in nameMap) {
+                  sorted.push({ name, count: nameMap[name] });
+                }
+                sorted.sort((a, b) => -(a.count - b.count));
+                for (let { name, count } of sorted) {
+                  const div = document.createElement('div');
+                  div.style.fontSize = '8px';
+                  div.innerText = `${name}: ${count}\n`;
+                  timeline.appendChild(div);
+                }
+                nameMap = {};
+                const event = document.createElement('div');
+                event.style.fontSize = '12px';
+                if (chat.eventType === KakaoTalkChat.ChatEventType.JOIN) {
+                  event.innerText = `${chat.name} 님이 들어왔습니다.`;
+                  event.style.backgroundColor = '#00f1';
+                } else if (chat.eventType === KakaoTalkChat.ChatEventType.LEAVE) {
+                  event.innerText = `${chat.name} 님이 나갔습니다.`;
+                  event.style.backgroundColor = '#f001';
+                }
+                timeline.appendChild(event);
+              } else if (chat.type === KakaoTalkChat.ChatType.MESSAGE) {
+                if (!nameMap[chat.name]) {
+                  nameMap[chat.name] = 0;
+                }
+                nameMap[chat.name]++;
+              }
+            }
+          }
+        };
+        const ports: MessagePort[] = [ messageChannel.port2 ];
+        navigator.serviceWorker.controller?.postMessage(data, ports);
+      });
+      fileReader.readAsText(file);
+    } else {
+      label.innerText = document.querySelector<HTMLInputElement>('#input-file-default')?.value!;
+    }
+  });
+
+  const search: HTMLButtonElement = document.querySelector<HTMLButtonElement>('#search')!;
+  search.addEventListener('click', (ev: MouseEvent) => {
+    const searchName: string = document.querySelector<HTMLInputElement>('#search-name')?.value.trim()!;
+    const searchKeyword: string = document.querySelector<HTMLInputElement>('#search-keyword')?.value.trim()!;
+    const searchKeywordExactMatch: boolean = document.querySelector<HTMLInputElement>('#search-keyword-exact-match')?.checked!;
+    let totalCount = 0;
+    let searchCount = 0;
+    const chats: KakaoTalkChat.Chat[] = g.groupByName[searchName];
+    for (let chat of chats) {
+      if (chat.type === KakaoTalkChat.ChatType.MESSAGE) {
+        totalCount++;
+        if (searchKeywordExactMatch && chat.text === searchKeyword) {
+          searchCount++;
+        } else if (!searchKeywordExactMatch && chat.text.includes(searchKeyword)) {
+          searchCount++;
+        }
+      }
+    }
+    const searchResult: HTMLDivElement = document.querySelector<HTMLDivElement>('#search-result')!;
+    searchResult.innerText = `${searchName} 님께서`
+      + ` 보낸 전체 메시지 수는 ${totalCount} 번 입니다.`;
+    if (searchKeywordExactMatch) {
+      searchResult.innerText += `\n${searchName} 님께서 '${searchKeyword}' 단어만 사용하신 횟수는 ${searchCount} 번 입니다.`;
+    } else {
+      searchResult.innerText += `\n${searchName} 님께서 '${searchKeyword}' 단어를 사용하신 횟수는 ${searchCount} 번 입니다.`;
+    }
+  });
+
+  registration.addEventListener('updatefound', (ev: Event) => {
+    console.log(ev.type)
+  });
+  if (navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.addEventListener('statechange', (ev: Event) => {
+      console.log(ev.type)
+    });
+    navigator.serviceWorker.controller.addEventListener('error', (ev: Event) => {
+      console.log(ev.type)
+    });
+  }
+});
