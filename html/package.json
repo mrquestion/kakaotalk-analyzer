@@ -1,0 +1,26 @@
+{
+  "name": "html",
+  "version": "1.0.0",
+  "description": "",
+  "main": ".eslintrc.js",
+  "scripts": {
+    "build:scss": "npx node-sass style.scss --output .",
+    "build:scss:watch": "yarn build:scss --watch",
+    "build:ts": "npx tsc --build tsconfig.json",
+    "build:ts:watch": "yarn build:ts --watch",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "moment": "^2.29.1"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^4.23.0",
+    "@typescript-eslint/parser": "^4.23.0",
+    "crypto-js": "^4.0.0",
+    "eslint": "^7.26.0",
+    "node-sass": "^6.0.0",
+    "typescript": "^4.2.4"
+  }
+}
